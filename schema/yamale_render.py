@@ -95,7 +95,7 @@ def analyze(classes):
                         mdata["default"] = "["+mdata["default"][1:-1]+"]"
                     mdata['description'] = re.sub(r"\[default:(.+?)\]", "", mdata['description']).strip()
 
-            m = re.search(r"\b(map|list)\(", mdata["typedef"])
+            m = re.search(r"^(map|list)\(", mdata["typedef"])
             if m is not None:
                 if m.groups()[0] == "map":
                     mdata["kind"] = "map"
@@ -106,6 +106,12 @@ def analyze(classes):
 
             if len(mdata["clss"]) > 0:
                 mdata["type"] = "cls"
+                continue
+
+            m = re.search(r"[^=]\bany\(", mdata["typedef"])
+            if m is not None:
+                mdata["type"] = "any"
+                # TODO: supported types for any
                 continue
 
             m = re.search(r"[^=]\bnum\(", mdata["typedef"])
@@ -168,6 +174,64 @@ def to_uml(classes):
 
     result.append("@enduml")
     return "\n".join(result)
+
+
+def to_py(classes):
+    result = []
+    with open("schema_class_template.py", "r") as f:
+        template = f.readlines()
+
+    for line in template:
+        if line.strip()[:2] not in ("#>", "#@"):
+            result.append(line)
+
+    for name, data in classes.items():
+        skip = False
+        for line in template:
+            if line.strip()[:2] == "#>":
+                continue
+            if line.strip() == "#@once":
+                skip = True
+            if line.strip() == "#@witheach":
+                skip = False
+            if skip:
+                continue
+
+            if line.strip()[:2] != "#@":
+                result.append(line)
+                continue
+
+            if line.strip() == "#@declare_class":
+                result.append(f"class {name}(SchemaClassTemplate):")
+                continue
+
+            if line.strip() == "#@members_from_dict":
+                for member, mdata in data["members"].items():
+                    member_type = str(mdata['type'])
+
+                    if mdata["kind"] == "map":
+                        member_type = '{'+member_type+'}'
+                    elif mdata["kind"] == "list":
+                        member_type = '['+member_type+']'
+
+                    optional = ""
+                    if mdata["optional"] is True:
+                        optional = "*"
+                    elif mdata["optional"] is None:
+                        optional = "**"
+                    # result.append(f"  {mdata['type']}{optional} => {member}")
+                    result.append(f"  {member} => {member_type}{optional}")
+
+                for member, mdata in data["members"].items():
+                    if mdata["type"] != "cls":
+                        continue
+                    for ref in mdata["clss"]:
+                        kind = ""
+                        # if mdata["kind"] == "map":
+                        #     kind = '"{}"'
+                        # elif mdata["kind"] == "list":
+                        #     kind = '"[]"'
+                        result.append(f"{name}::{member} {kind} => {ref}")
 
 
 if __name__ == "__main__":
