@@ -1,6 +1,6 @@
 #!/bin/bash
 
-/bin/bash /home/schems-fun/repo/mk_anvilapp_symlinks.sh
+/bin/bash /home/schems-fun/site/mk_anvilapp_symlinks.sh
 
 anvil-app-server \
     --app schematic_capture \
