@@ -1,0 +1,11 @@
+version: "3"
+services:
+  schems-fun-dev:
+    image: schems-fun-dev:latest
+    volumes:
+      - ./container-data:/home/schems-fun/anvil.data
+      - ../..:/home/schems-fun/site:ro
+    # stdin_open: true # docker run -i
+    # tty: true        # docker run -t
+    ports:
+      - "3030:3030"
